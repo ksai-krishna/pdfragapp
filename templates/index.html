@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>PDF Chatbot</title>
+</head>
+<body>
+    <div class="container">
+        <h1>PDF Chatbot</h1>
+        <textarea id="user-input" placeholder="Ask a question..."></textarea>
+        <button id="submit-button">Ask</button>
+        <div id="response"></div>
+    </div>
+    <script>
+        document.getElementById('submit-button').onclick = function() {
+            const query = document.getElementById('user-input').value;
+            fetch('/ask', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ query: query }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('response').innerText = data.response;
+            });
+        };
+    </script>
+</body>
+</html>
