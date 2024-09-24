@@ -3,31 +3,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <title>PDF Chatbot</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        #chat-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        #messages {
+            height: 300px;
+            overflow-y: scroll;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 20px;
+        }
+        .user-message {
+            color: blue;
+            margin: 5px 0;
+        }
+        .bot-response {
+            color: green;
+            margin: 5px 0;
+        }
+        input[type="text"] {
+            width: calc(100% - 30px);
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+        button {
+            padding: 10px;
+            border: none;
+            background-color: #28a745;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
+
+    <div id="chat-container">
         <h1>PDF Chatbot</h1>
-        <textarea id="user-input" placeholder="Ask a question..."></textarea>
-        <button id="submit-button">Ask</button>
-        <div id="response"></div>
+        <div id="messages"></div>
+        <div>
+            <input type="text" id="user-input" placeholder="Ask a question..." />
+            <button id="send-button">Send</button>
+        </div>
     </div>
+
     <script>
-        document.getElementById('submit-button').onclick = function() {
-            const query = document.getElementById('user-input').value;
+        document.getElementById('send-button').onclick = function() {
+            const userInput = document.getElementById('user-input').value;
+            if (userInput.trim() === '') {
+                return;
+            }
+            appendMessage(userInput, 'user-message');
+            document.getElementById('user-input').value = '';
+
             fetch('/ask', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ query: query }),
+                body: JSON.stringify({ query: userInput }),
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok ' + response.statusText);
+                }
+                return response.json();
+            })
             .then(data => {
-                document.getElementById('response').innerText = data.response;
+                appendMessage(data.response, 'bot-response');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                appendMessage("Error communicating with the server.", 'bot-response');
             });
         };
+
+        function appendMessage(message, className) {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.textContent = message;
+            messageDiv.className = className;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight; // Auto-scroll
+        }
     </script>
+
 </body>
 </html>

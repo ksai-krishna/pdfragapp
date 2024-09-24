@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ollama Model Checker</title>
+    <script>
+        async function sendQuery() {
+            const queryInput = document.getElementById("query").value;
+            const responseDiv = document.getElementById("response");
+            responseDiv.innerText = "Loading...";
+
+            try {
+                const response = await fetch('/ask', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ query: queryInput })
+                });
+
+                const data = await response.json();
+                responseDiv.innerText = data.response;
+            } catch (error) {
+                responseDiv.innerText = "Error communicating with the server.";
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>Ollama Model Checker</h1>
+    <input type="text" id="query" placeholder="Ask a question..." />
+    <button onclick="sendQuery()">Send</button>
+    <p id="response"></p>
+</body>
+</html>
