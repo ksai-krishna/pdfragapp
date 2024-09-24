@@ -1,0 +1,23 @@
+
+downloading ollama
+
+curl -fsSL https://ollama.com/install.sh | sh
+
+to start the ollama on local server 
+
+ollama serve
+
+
+to run the model ollama run llama2 "what is ai"
+
+ollama run model_name "{Question}"
+
+
+to remove a model - rm -rf ~/.ollama/models/manifests/registry.ollama.ai/library/openchat
+here openchat is model name it should be changed which model you want delete
+
+
+curl -fsSL https://ollama.com/install.sh | sh
+ollama serve
+
+ollama run llama2 "what is ai"
