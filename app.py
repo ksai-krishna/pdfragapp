@@ -1,61 +1,75 @@
-import pdfplumber
+from flask import Flask, render_template, request, jsonify
+import PyPDF2
+import subprocess
+import numpy as np
 import faiss
-from sentence_transformers import SentenceTransformer
-from transformers import AutoModelForCausalLM, AutoTokenizer
 
-# Step 1: Extract Text from PDF
-def extract_text_from_pdf(pdf_file):
-    with pdfplumber.open(pdf_file) as pdf:
-        full_text = ""
-        for page in pdf.pages:
-            full_text += page.extract_text()
-    return full_text
+app = Flask(__name__)
 
-# Step 2: Preprocess and Split Text into Documents
-def split_text_into_chunks(text, chunk_size=500):
-    words = text.split()
-    chunks = [' '.join(words[i:i + chunk_size]) for i in range(0, len(words), chunk_size)]
-    return chunks
+# List to hold the extracted document texts
+documents = []
 
-# Load the PDF and split into documents
-pdf_file = "input.pdf"
-pdf_text = extract_text_from_pdf(pdf_file)
-documents = split_text_into_chunks(pdf_text)
+# Function to extract text from a PDF file
+def extract_text_from_pdf(pdf_path):
+    text = ''
+    with open(pdf_path, 'rb') as file:
+        reader = PyPDF2.PdfReader(file)
+        for page in reader.pages:
+            text += page.extract_text() + ' '  # Adding space between pages
+    return text
 
-# Step 3: Convert Documents to Embeddings using Sentence Transformerss
-embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-document_vectors = embedding_model.encode(documents)
+# Function to load PDFs into the documents list
+def load_pdfs(pdf_paths):
+    for pdf_path in pdf_paths:
+        text = extract_text_from_pdf(pdf_path)
+        documents.append(text)
 
-# Step 4: Create FAISS Index for Document Retrieval
-index = faiss.IndexFlatL2(document_vectors.shape[1])  # L2 distance index
-index.add(document_vectors)
+# Load your PDF files here (adjust paths accordingly)
+pdf_paths = ['input.pdf']
+load_pdfs(pdf_paths)
 
-# Step 5: Define a Retrieval Function
-def retrieve_relevant_documents(query, k=3):
-    query_vector = embedding_model.encode([query])
-    distances, indices = index.search(query_vector, k)
-    return [documents[i] for i in indices[0]]
+# Create FAISS index (this assumes you have embeddings prepared)
+# You will need to create or replace this with actual embeddings from your documents
+embeddings_np = np.random.rand(len(documents), 768).astype(np.float32)  # Replace with actual embeddings
+index = faiss.IndexFlatL2(embeddings_np.shape[1])
+index.add(embeddings_np)
 
-# Step 6: Load Pre-Trained Language Model for Generation (GPT-Neo)
-model_name = "EleutherAI/gpt-neo-1.3B"
-model = AutoModelForCausalLM.from_pretrained(model_name)
-tokenizer = AutoTokenizer.from_pretrained(model_name)
+# Define the main route to render the index page
+@app.route('/')
+def index_view():
+    return render_template('index.html')
 
-def generate_answer(prompt):
-    inputs = tokenizer(prompt, return_tensors="pt")
-    outputs = model.generate(inputs['input_ids'], max_length=150)
-    return tokenizer.decode(outputs[0], skip_special_tokens=True)
+# Function to query the Ollama model
+def query_ollama_model(prompt):
+    """Query the Ollama model using subprocess."""
+    result = subprocess.run(['ollama', 'run', 'llama2', prompt], capture_output=True, text=True)
+    if result.returncode != 0:
+        print(f"Error running model: {result.stderr}")
+        return "An error occurred while querying the model."
+    return result.stdout.strip()
 
-# Step 7: Combine Retrieval and Generation in RAG Pipeline
-def rag_pipeline(user_query):
-    relevant_docs = retrieve_relevant_documents(user_query)
-    context = " ".join(relevant_docs)
-    combined_input = f"Query: {user_query} \n Context: {context}"
-    answer = generate_answer(combined_input)
-    return answer
+# Route to handle user queries
+@app.route('/ask', methods=['POST'])
+def ask():
+    try:
+        data = request.get_json()
+        user_query = data['query']
 
-# Example Usage
+        # Perform FAISS search here to get relevant documents
+        query_embedding = np.random.rand(1, 768).astype(np.float32)  # Replace with actual embedding for the query
+        distances, indices = index.search(query_embedding, 5)  # Retrieve top 5 documents
+        retrieved_docs = [documents[i] for i in indices[0]]
+        context = " ".join(retrieved_docs)
+
+        # Query the Ollama model with context and user query
+        prompt = f"Context: {context}\nQuestion: {user_query}\nAnswer:"
+        answer = query_ollama_model(prompt)
+
+        return jsonify({'response': answer})
+
+    except Exception as e:
+        print(f"Error processing request: {e}")
+        return jsonify({'response': "An error occurred while processing your request."}), 500
+
 if __name__ == '__main__':
-    user_query = input("Enter your query: ")
-    response = rag_pipeline(user_query)
-    print("Answer:", response)
+    app.run(debug=True)
