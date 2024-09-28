@@ -20,4 +20,4 @@ here openchat is model name it should be changed which model you want delete
 curl -fsSL https://ollama.com/install.sh | sh
 ollama serve
 
-ollama run llama2 "what is ai"
+ollama run llama3 "what is ai"
