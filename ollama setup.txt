@@ -21,3 +21,8 @@ curl -fsSL https://ollama.com/install.sh | sh
 ollama serve
 
 ollama run llama3 "what is ai"
+
+df -h t p see all the storage 
+df -BG --output=avail /  
+# the above command shows the present available storage
+
